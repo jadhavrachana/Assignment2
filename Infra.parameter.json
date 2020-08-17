@@ -1,0 +1,46 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "virtualMachinesname2": {
+            "value": "ADServer"
+        },
+        "virtualMachinesname1": {
+            "value": "JumpServer"
+        },
+        "virtualMachinesname3": {
+            "value": "ToolServer"
+        },
+        "virtualNetworksname": {
+            "value": "Webappvnet"
+        },
+        "networkSecurityGroupsname2": {
+            "value": "adnsg"
+        },
+        "networkSecurityGroupsname1": {
+            "value": "jsnsg"
+        },
+        "networkSecurityGroupsname3": {
+            "value": "toolnsg"
+        },
+        "networkInterfacesname2": {
+            "value": "adserver496"
+        },
+        
+        "networkInterfacesname1": {
+            "value": "jumpserver985"
+        },
+        "networkInterfacesname3": {
+            "value": "toolserver121"
+        },
+        "publicIPAddresses_JumpServer_ip_name": {
+            "value": "JumpServer-ip_name"
+        },
+        "publicIPAddresses_ToolServer_ip_name": {
+            "value": "ToolServer_ip_name"
+        },
+        "adminPassword": {
+            "value": "sample@12345"
+        }
+    }
+}
