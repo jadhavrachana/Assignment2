@@ -41,6 +41,12 @@
         },
         "adminPassword": {
             "value": "sample@12345"
-        }
+        },
+        "sqlAdministratorLogin": {
+            "value": "rachana"
+          },
+          "sqlAdministratorLoginPassword": {		
+            "value": "Database@12qw"		
+          }		
     }
 }

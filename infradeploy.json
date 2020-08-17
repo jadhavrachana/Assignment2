@@ -1,549 +1,699 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-        "virtualMachinesname1": {
-            "type": "String"
-        },
-        "virtualMachinesname2": {
-            "type": "String"
-        },
-        "virtualMachinesname3": {
-            "type": "String"
-        },
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"virtualMachinesname1": {
+			"type": "String"
+		},
+		"virtualMachinesname2": {
+			"type": "String"
+		},
+		"virtualMachinesname3": {
+			"type": "String"
+		},
 
-        "virtualNetworksname": {
-            "defaultValue": "Webappvnet",
-            "type": "String"
+		"virtualNetworksname": {
+			"defaultValue": "Webappvnet",
+			"type": "String"
+		},
+		"networkSecurityGroupsname1": {
+			"defaultValue": "jsnsg",
+			"type": "String"
+		},
+		"networkSecurityGroupsname2": {
+			"defaultValue": "adnsg",
+			"type": "String"
+		},
+
+		"networkSecurityGroupsname3": {
+			"defaultValue": "toolnsg",
+			"type": "String"
+		},
+		"networkInterfacesname1": {
+			"defaultValue": "jumpserver985",
+			"type": "String"
+		},
+		"networkInterfacesname2": {
+			"defaultValue": "adserver496",
+			"type": "String"
+		},
+		"networkInterfacesname3": {
+			"defaultValue": "toolserver121",
+			"type": "String"
+		},
+		"publicIPAddresses_JumpServer_ip_name": {
+			"defaultValue": "JumpServer-ip",
+			"type": "String"
+		},
+		"publicIPAddresses_ToolServer_ip_name": {
+			"defaultValue": "ToolServer-ip",
+			"type": "String"
+		},
+		"adminPassword": {
+			"type": "SecureString"
+		},
+		"skuName": {
+			"type": "string",
+			"defaultValue": "F1",
+			"allowedValues": [
+				"F1",
+				"D1",
+				"B1",
+				"B2",
+				"B3",
+				"S1",
+				"S2",
+				"S3",
+				"P1",
+				"P2",
+				"P3",
+				"P4"
+			],
+			"metadata": {
+				"description": "Describes plan's pricing tier and instance size. Check details at https://azure.microsoft.com/en-us/pricing/details/app-service/"
+			}
+		},
+		"skuCapacity": {
+			"type": "int",
+			"defaultValue": 1,
+			"minValue": 1,
+			"maxValue": 3,
+			"metadata": {
+				"description": "Describes plan's instance count"
+			}
+		},
+		"sqlAdministratorLogin": {
+			"type": "string",
+			"metadata": {
+				"description": "The admin user of the SQL Server"
+			}
+		},
+		"sqlAdministratorLoginPassword": {
+			"type": "securestring",
+			"metadata": {
+				"description": "The password of the admin user of the SQL Server"
+			}
+		}
+
+
+	},
+	"variables": {
+		"hostingPlanName": "[concat('hostingplan', uniqueString(resourceGroup().id))]",
+		"webSiteName": "[concat('webSite', uniqueString(resourceGroup().id))]",
+		"sqlserverName": "[concat('sqlserver', uniqueString(resourceGroup().id))]",
+		"databaseName": "sampledb"
+	},
+
+
+	"resources": [
+        {
+			"type": "Microsoft.Network/networkSecurityGroups",
+			"apiVersion": "2020-05-01",
+			"name": "[parameters('networkSecurityGroupsname1')]",
+			"location": "eastus",
+			"properties": {
+				"securityRules": [{
+						"name": "rdp_rule",
+						"properties": {
+							"description": "Allow RDP",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "3389",
+							"sourceAddressPrefix": "Internet",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 100,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "web_rule",
+						"properties": {
+							"description": "Allow WEB",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "80",
+							"sourceAddressPrefix": "Internet",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 101,
+							"direction": "Inbound"
+						}
+					}
+				]
+			}
+		},
+
+		{
+			"type": "Microsoft.Network/networkSecurityGroups",
+			"apiVersion": "2020-05-01",
+			"name": "[parameters('networkSecurityGroupsname2')]",
+			"location": "eastus",
+			"properties": {
+				"securityRules": [{
+						"name": "Allow_JS",
+						"properties": {
+							"description": "Allow Jump Subnet",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "443",
+							"sourceAddressPrefix": "10.0.0.0/24",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 100,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "Block_RDP_Internet",
+						"properties": {
+							"description": "Block RDP",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "3389",
+							"sourceAddressPrefix": "Internet",
+							"destinationAddressPrefix": "*",
+							"access": "Deny",
+							"priority": 101,
+							"direction": "Inbound"
+
+						}
+					},
+					{
+						"name": "Block_Internet_Outbound",
+						"properties": {
+							"description": "Block Internet",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "*",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "Internet",
+							"access": "Deny",
+							"priority": 200,
+							"direction": "Outbound"
+
+						}
+					}
+				]
+			}
+		},
+		{
+			"type": "Microsoft.Network/networkSecurityGroups",
+			"apiVersion": "2020-05-01",
+			"name": "[parameters('networkSecurityGroupsname3')]",
+			"location": "eastus",
+			"properties": {
+				"securityRules": [{
+						"name": "Allow_JS",
+						"properties": {
+							"description": "Allow Jump Subnet",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "443",
+							"sourceAddressPrefix": "10.0.0.0/24",
+							"destinationAddressPrefix": "*",
+							"access": "Allow",
+							"priority": 100,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "Block_RDP_Internet",
+						"properties": {
+							"description": "Block RDP",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "3389",
+							"sourceAddressPrefix": "Internet",
+							"destinationAddressPrefix": "*",
+							"access": "Deny",
+							"priority": 101,
+							"direction": "Inbound"
+						}
+					},
+					{
+						"name": "Block_Internet_Outbound",
+						"properties": {
+							"description": "Block Internet",
+							"protocol": "*",
+							"sourcePortRange": "*",
+							"destinationPortRange": "*",
+							"sourceAddressPrefix": "*",
+							"destinationAddressPrefix": "Internet",
+							"access": "Deny",
+							"priority": 200,
+							"direction": "Outbound"
+						}
+					}
+				]
+			}
+		},
+		{
+			"type": "Microsoft.Network/publicIPAddresses",
+			"apiVersion": "2020-05-01",
+			"name": "[parameters('publicIPAddresses_JumpServer_ip_name')]",
+			"location": "eastus",
+			"sku": {
+				"name": "Basic"
+			},
+			"properties": {
+				"ipAddress": "40.88.6.179",
+				"publicIPAddressVersion": "IPv4",
+				"publicIPAllocationMethod": "Dynamic",
+				"idleTimeoutInMinutes": 4
+			}
+		},
+		{
+			"type": "Microsoft.Network/publicIPAddresses",
+			"apiVersion": "2020-05-01",
+			"name": "[parameters('publicIPAddresses_ToolServer_ip_name')]",
+			"location": "eastus",
+			"sku": {
+				"name": "Basic"
+			},
+			"properties": {
+				"ipAddress": "104.211.60.121",
+				"publicIPAddressVersion": "IPv4",
+				"publicIPAllocationMethod": "Dynamic",
+				"idleTimeoutInMinutes": 4
+			}
+		},
+		{
+			"type": "Microsoft.Network/networkInterfaces",
+			"apiVersion": "2020-05-01",
+			"name": "[parameters('networkInterfacesname1')]",
+			"location": "eastus",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_JumpServer_ip_name'))]",
+				"[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworksname'), 'JSSubnet')]"
+			],
+			"properties": {
+				"ipConfigurations": [{
+					"name": "ipconfig1",
+					"properties": {
+						"privateIPAddress": "10.0.0.4",
+						"privateIPAllocationMethod": "Dynamic",
+						"publicIPAddress": {
+							"id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_JumpServer_ip_name'))]"
+						},
+						"subnet": {
+							"id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworksname'), 'JSSubnet')]"
+						},
+						"primary": true,
+						"privateIPAddressVersion": "IPv4"
+					}
+				}]
+			}
+		},
+
+		{
+			"type": "Microsoft.Network/networkInterfaces",
+			"apiVersion": "2020-05-01",
+			"name": "[parameters('networkInterfacesname2')]",
+			"location": "eastus",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworksname'), 'ADSubnet')]"
+			],
+			"properties": {
+				"ipConfigurations": [{
+					"name": "ipconfig1",
+					"properties": {
+						"privateIPAddress": "10.0.1.4",
+						"privateIPAllocationMethod": "Dynamic",
+						"subnet": {
+							"id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworksname'), 'ADSubnet')]"
+						},
+						"primary": true,
+						"privateIPAddressVersion": "IPv4"
+					}
+				}]
+			}
+		},
+		{
+			"type": "Microsoft.Network/networkInterfaces",
+			"apiVersion": "2020-05-01",
+			"name": "[parameters('networkInterfacesname3')]",
+			"location": "eastus",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_ToolServer_ip_name'))]",
+				"[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworksname'), 'ToolSubnet')]"
+			],
+			"properties": {
+				"ipConfigurations": [{
+					"name": "ipconfig1",
+					"properties": {
+						"privateIPAddress": "10.0.2.4",
+						"privateIPAllocationMethod": "Dynamic",
+						"publicIPAddress": {
+							"id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_ToolServer_ip_name'))]"
+						},
+						"subnet": {
+							"id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworksname'), 'ToolSubnet')]"
+						},
+						"primary": true,
+						"privateIPAddressVersion": "IPv4"
+					}
+				}]
+
+			}
+		},
+		{
+			"type": "Microsoft.Compute/virtualMachines",
+			"apiVersion": "2019-07-01",
+			"name": "[parameters('virtualMachinesname1')]",
+			"location": "eastus",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname1'))]"
+			],
+			"properties": {
+				"hardwareProfile": {
+					"vmSize": "Standard_DS1_v2"
+				},
+				"storageProfile": {
+					"imageReference": {
+						"publisher": "MicrosoftWindowsServer",
+						"offer": "WindowsServer",
+						"sku": "2019-Datacenter",
+						"version": "latest"
+					}
+
+				},
+				"osProfile": {
+					"computerName": "[parameters('virtualMachinesname1')]",
+					"adminUsername": "[parameters('virtualMachinesname1')]",
+					"adminPassword": "[parameters('adminPassword')]",
+					"allowExtensionOperations": true
+				},
+				"networkProfile": {
+					"networkInterfaces": [{
+						"id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname1'))]"
+					}]
+				}
+
+			}
+		},
+		{
+			"type": "Microsoft.Compute/virtualMachines",
+			"apiVersion": "2019-07-01",
+			"name": "[parameters('virtualMachinesname2')]",
+			"location": "eastus",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname2'))]"
+
+			],
+			"properties": {
+				"hardwareProfile": {
+					"vmSize": "Standard_DS1_v2"
+				},
+				"storageProfile": {
+					"imageReference": {
+						"publisher": "MicrosoftWindowsServer",
+						"offer": "WindowsServer",
+						"sku": "2019-Datacenter",
+						"version": "latest"
+					}
+
+				},
+				"osProfile": {
+					"computerName": "[parameters('virtualMachinesname2')]",
+					"adminUsername": "[parameters('virtualMachinesname2')]",
+					"adminPassword": "[parameters('adminPassword')]",
+					"allowExtensionOperations": true
+
+				},
+				"networkProfile": {
+					"networkInterfaces": [{
+						"id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname2'))]"
+					}]
+				}
+
+			}
+		},
+
+		{
+			"type": "Microsoft.Compute/virtualMachines",
+			"apiVersion": "2019-07-01",
+			"name": "[parameters('virtualMachinesname3')]",
+			"location": "eastus",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname3'))]"
+
+			],
+			"properties": {
+				"hardwareProfile": {
+					"vmSize": "Standard_DS1_v2"
+				},
+				"storageProfile": {
+					"imageReference": {
+						"publisher": "MicrosoftWindowsServer",
+						"offer": "WindowsServer",
+						"sku": "2019-Datacenter",
+						"version": "latest"
+					}
+
+				},
+				"osProfile": {
+					"computerName": "[parameters('virtualMachinesname3')]",
+					"adminUsername": "[parameters('virtualMachinesname3')]",
+					"adminPassword": "[parameters('adminPassword')]",
+					"allowExtensionOperations": true
+
+				},
+				"networkProfile": {
+					"networkInterfaces": [{
+						"id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname3'))]"
+					}]
+				}
+
+			}
+		},
+
+		{
+			"type": "Microsoft.Network/virtualNetworks/subnets",
+			"apiVersion": "2020-05-01",
+			"name": "[concat(parameters('virtualNetworksname'), '/ADSubnet')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworksname'))]",
+				"[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname2'))]"
+			],
+			"properties": {
+				"addressPrefix": "10.0.1.0/24",
+				"networkSecurityGroup": {
+					"id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname2'))]"
+				},
+				"delegations": [],
+				"privateEndpointNetworkPolicies": "Enabled",
+				"privateLinkServiceNetworkPolicies": "Enabled"
+			}
+		},
+		{
+			"type": "Microsoft.Network/virtualNetworks/subnets",
+			"apiVersion": "2020-05-01",
+			"name": "[concat(parameters('virtualNetworksname'), '/JSSubnet')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworksname'))]",
+				"[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname1'))]"
+			],
+			"properties": {
+				"addressPrefix": "10.0.0.0/24",
+				"networkSecurityGroup": {
+					"id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname1'))]"
+				},
+				"delegations": [],
+				"privateEndpointNetworkPolicies": "Enabled",
+				"privateLinkServiceNetworkPolicies": "Enabled"
+			}
+		},
+		{
+			"type": "Microsoft.Network/virtualNetworks/subnets",
+			"apiVersion": "2020-05-01",
+			"name": "[concat(parameters('virtualNetworksname'), '/ToolSubnet')]",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworksname'))]",
+				"[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname3'))]"
+			],
+			"properties": {
+				"addressPrefix": "10.0.2.0/24",
+				"networkSecurityGroup": {
+					"id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname3'))]"
+				},
+				"delegations": [],
+				"privateEndpointNetworkPolicies": "Enabled",
+				"privateLinkServiceNetworkPolicies": "Enabled"
+			}
+		},
+		{
+			"type": "Microsoft.Network/virtualNetworks",
+			"apiVersion": "2020-05-01",
+			"name": "[parameters('virtualNetworksname')]",
+			"location": "eastus",
+			"dependsOn": [
+				"[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname1'))]",
+				"[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname2'))]",
+				"[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname3'))]"
+			],
+			"properties": {
+				"addressSpace": {
+					"addressPrefixes": [
+						"10.0.0.0/16"
+					]
+				},
+				"subnets": [{
+						"name": "JSSubnet",
+						"properties": {
+							"addressPrefix": "10.0.0.0/24",
+							"networkSecurityGroup": {
+								"id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname1'))]"
+							},
+							"delegations": [],
+							"privateEndpointNetworkPolicies": "Enabled",
+							"privateLinkServiceNetworkPolicies": "Enabled"
+						}
+					},
+					{
+						"name": "ADSubnet",
+						"properties": {
+							"addressPrefix": "10.0.1.0/24",
+							"networkSecurityGroup": {
+								"id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname2'))]"
+							},
+							"delegations": [],
+							"privateEndpointNetworkPolicies": "Enabled",
+							"privateLinkServiceNetworkPolicies": "Enabled"
+						}
+					},
+					{
+						"name": "ToolSubnet",
+						"properties": {
+							"addressPrefix": "10.0.2.0/24",
+							"networkSecurityGroup": {
+								"id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname3'))]"
+							},
+							"delegations": [],
+							"privateEndpointNetworkPolicies": "Enabled",
+							"privateLinkServiceNetworkPolicies": "Enabled"
+						}
+					}
+				],
+				"virtualNetworkPeerings": [],
+				"enableDdosProtection": false,
+				"enableVmProtection": false
+			}
+		},	
+        {
+      "name": "[variables('sqlserverName')]",
+      "type": "Microsoft.Sql/servers",
+      "location": "eastus",
+      "tags": {
+        "displayName": "SqlServer"
+      },
+      "apiVersion": "2018-06-01-preview",
+      "properties": {
+        "administratorLogin": "[parameters('sqlAdministratorLogin')]",
+        "administratorLoginPassword": "[parameters('sqlAdministratorLoginPassword')]",
+        "version": "12.0"
+      },
+      "resources": [
+        {
+          "name": "[variables('databaseName')]",
+          "type": "databases",
+          "location": "eastus",
+          "tags": {
+            "displayName": "Database"
+          },
+          "apiVersion": "2018-06-01-preview",
+          "dependsOn": [
+            "[variables('sqlserverName')]"
+          ],
+          "properties": {
+            "edition": "Basic",
+            "collation": "SQL_Latin1_General_CP1_CI_AS",
+            "maxSizeBytes": "1073741824",
+            "requestedServiceObjectiveName": "Basic"
+          }
         },
-        "networkSecurityGroupsname1": {
-            "defaultValue": "jsnsg",
-            "type": "String"
-        },
-        "networkSecurityGroupsname2": {
-            "defaultValue": "adnsg",
-            "type": "String"
-        },
-        
-         "networkSecurityGroupsname3": {
-            "defaultValue": "toolnsg",
-            "type": "String"
-        },
-        "networkInterfacesname1": {
-            "defaultValue": "jumpserver985",
-            "type": "String"
-        },
-        "networkInterfacesname2": {
-            "defaultValue": "adserver496",
-            "type": "String"
-        },
-        "networkInterfacesname3": {
-            "defaultValue": "toolserver121",
-            "type": "String"
-        },
-        "publicIPAddresses_JumpServer_ip_name": {
-            "defaultValue": "JumpServer-ip",
-            "type": "String"
-        },
-        "publicIPAddresses_ToolServer_ip_name": {
-            "defaultValue": "ToolServer-ip",
-            "type": "String"
-        },
-         "adminPassword": {
-            "type": "SecureString"
+        {
+          "type": "firewallrules",
+          "apiVersion": "2018-06-01-preview",
+          "dependsOn": [
+            "[variables('sqlserverName')]"
+          ],
+          "location": "eastus",
+          "name": "AllowAllWindowsAzureIps",
+          "properties": {
+            "endIpAddress": "0.0.0.0",
+            "startIpAddress": "0.0.0.0"
+          }
         }
+      ]
+        },
+    {
+      "apiVersion": "2018-02-01",
+      "name": "[variables('hostingPlanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "location": "eastus",
+      "tags": {
+        "displayName": "HostingPlan"
+      },
+      "sku": {
+        "name": "[parameters('skuName')]",
+        "capacity": "[parameters('skuCapacity')]"
+      },
+      "properties": {
+        "name": "[variables('hostingPlanName')]"
+      }
     },
-    "variables": {},
-    "resources": [
+    {
+      "apiVersion": "2018-02-01",
+      "name": "[variables('webSiteName')]",
+      "type": "Microsoft.Web/sites",
+      "location": "eastus",
+      "dependsOn": [
+        "[variables('hostingPlanName')]"
+      ],
+      "tags": {
+        "[concat('hidden-related:', resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName')))]": "empty",
+        "displayName": "Website"
+      },
+      "properties": {
+        "name": "[variables('webSiteName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+      },
+      "resources": [
         {
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "apiVersion": "2020-05-01",
-            "name": "[parameters('networkSecurityGroupsname1')]",
-            "location": "eastus",
-            "properties": {
-                "securityRules": [
-                    {
-                        "name": "rdp_rule",
-                        "properties": {
-                            "description": "Allow RDP",
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "3389",
-                            "sourceAddressPrefix": "Internet",
-                            "destinationAddressPrefix": "*",
-                            "access": "Allow",
-                            "priority": 100,
-                            "direction": "Inbound"
-                        }
-                    },
-                    {
-                        "name": "web_rule",
-                        "properties": {
-                            "description": "Allow WEB",
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "80",
-                            "sourceAddressPrefix": "Internet",
-                            "destinationAddressPrefix": "*",
-                            "access": "Allow",
-                            "priority": 101,
-                            "direction": "Inbound"
-                        }
-                    }
-                ]
+          "apiVersion": "2018-02-01",
+          "type": "config",
+          "name": "connectionstrings",
+          "dependsOn": [
+            "[variables('webSiteName')]"
+          ],
+          "properties": {
+            "DefaultConnection": {
+              "value": "[concat('Data Source=tcp:', reference(concat('Microsoft.Sql/servers/', variables('sqlserverName'))).fullyQualifiedDomainName, ',1433;Initial Catalog=', variables('databaseName'), ';User Id=', parameters('sqlAdministratorLogin'), '@', reference(concat('Microsoft.Sql/servers/', variables('sqlserverName'))).fullyQualifiedDomainName, ';Password=', parameters('sqlAdministratorLoginPassword'), ';')]",
+              "type": "SQLAzure"
             }
-        },
-        
-        {
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "apiVersion": "2020-05-01",
-            "name": "[parameters('networkSecurityGroupsname2')]",
-            "location": "eastus",
-            "properties": {
-                "securityRules": [
-                    {
-                        "name": "Allow_JS",
-                        "properties": {
-                            "description": "Allow Jump Subnet",
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "443",
-                            "sourceAddressPrefix": "10.0.0.0/24",
-                            "destinationAddressPrefix": "*",
-                            "access": "Allow",
-                            "priority": 100,
-                            "direction": "Inbound"
-                        }
-                    },
-                    {
-                        "name": "Block_RDP_Internet",
-                        "properties": {
-                            "description": "Block RDP",
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "3389",
-                            "sourceAddressPrefix": "Internet",
-                            "destinationAddressPrefix": "*",
-                            "access": "Deny",
-                            "priority": 101,
-                            "direction": "Inbound"
-                           
-                        }
-                    },
-                    {
-                        "name": "Block_Internet_Outbound",
-                        "properties": {
-                            "description": "Block Internet",
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "*",
-                            "sourceAddressPrefix": "*",
-                            "destinationAddressPrefix": "Internet",
-                            "access": "Deny",
-                            "priority": 200,
-                            "direction": "Outbound"
-                            
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "apiVersion": "2020-05-01",
-            "name": "[parameters('networkSecurityGroupsname3')]",
-            "location": "eastus",
-            "properties": {
-                "securityRules": [
-                    {
-                        "name": "Allow_JS",
-                        "properties": {
-                            "description": "Allow Jump Subnet",
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "443",
-                            "sourceAddressPrefix": "10.0.0.0/24",
-                            "destinationAddressPrefix": "*",
-                            "access": "Allow",
-                            "priority": 100,
-                            "direction": "Inbound"
-                        }
-                    },
-                    {
-                        "name": "Block_RDP_Internet",
-                        "properties": {
-                            "description": "Block RDP",
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "3389",
-                            "sourceAddressPrefix": "Internet",
-                            "destinationAddressPrefix": "*",
-                            "access": "Deny",
-                            "priority": 101,
-                            "direction": "Inbound"
-                        }
-                    },
-                    {
-                        "name": "Block_Internet_Outbound",
-                        "properties": {
-                            "description": "Block Internet",
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "*",
-                            "sourceAddressPrefix": "*",
-                            "destinationAddressPrefix": "Internet",
-                            "access": "Deny",
-                            "priority": 200,
-                            "direction": "Outbound"
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            "type": "Microsoft.Network/publicIPAddresses",
-            "apiVersion": "2020-05-01",
-            "name": "[parameters('publicIPAddresses_JumpServer_ip_name')]",
-            "location": "eastus",
-            "sku": {
-                "name": "Basic"
-            },
-            "properties": {
-                "ipAddress": "40.88.6.179",
-                "publicIPAddressVersion": "IPv4",
-                "publicIPAllocationMethod": "Dynamic",
-                "idleTimeoutInMinutes": 4
-            }
-        },
-        {
-            "type": "Microsoft.Network/publicIPAddresses",
-            "apiVersion": "2020-05-01",
-            "name": "[parameters('publicIPAddresses_ToolServer_ip_name')]",
-            "location": "eastus",
-            "sku": {
-                "name": "Basic"
-            },
-            "properties": {
-                "ipAddress": "104.211.60.121",
-                "publicIPAddressVersion": "IPv4",
-                "publicIPAllocationMethod": "Dynamic",
-                "idleTimeoutInMinutes": 4
-            }
-        },
-        {
-            "type": "Microsoft.Network/networkInterfaces",
-            "apiVersion": "2020-05-01",
-            "name": "[parameters('networkInterfacesname1')]",
-            "location": "eastus",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_JumpServer_ip_name'))]",
-                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworksname'), 'JSSubnet')]"
-            ],
-            "properties": {
-                "ipConfigurations": [
-                    {
-                        "name": "ipconfig1",
-                        "properties": {
-                            "privateIPAddress": "10.0.0.4",
-                            "privateIPAllocationMethod": "Dynamic",
-                            "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_JumpServer_ip_name'))]"
-                            },
-                            "subnet": {
-                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworksname'), 'JSSubnet')]"
-                            },
-                            "primary": true,
-                            "privateIPAddressVersion": "IPv4"
-                        }
-                    }
-                ],
-            }
-        },
-        
-        {
-            "type": "Microsoft.Network/networkInterfaces",
-            "apiVersion": "2020-05-01",
-            "name": "[parameters('networkInterfacesname2')]",
-            "location": "eastus",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworksname'), 'ADSubnet')]"
-            ],
-            "properties": {
-                "ipConfigurations": [
-                    {
-                        "name": "ipconfig1",
-                        "properties": {
-                            "privateIPAddress": "10.0.1.4",
-                            "privateIPAllocationMethod": "Dynamic",
-                            "subnet": {
-                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworksname'), 'ADSubnet')]"
-                            },
-                            "primary": true,
-                            "privateIPAddressVersion": "IPv4"
-                        }
-                    }
-                ],
-            }
-        },
-        {
-            "type": "Microsoft.Network/networkInterfaces",
-            "apiVersion": "2020-05-01",
-            "name": "[parameters('networkInterfacesname3')]",
-            "location": "eastus",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_ToolServer_ip_name'))]",
-                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworksname'), 'ToolSubnet')]"
-            ],
-            "properties": {
-                "ipConfigurations": [
-                    {
-                        "name": "ipconfig1",
-                        "properties": {
-                            "privateIPAddress": "10.0.2.4",
-                            "privateIPAllocationMethod": "Dynamic",
-                            "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_ToolServer_ip_name'))]"
-                            },
-                            "subnet": {
-                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworksname'), 'ToolSubnet')]"
-                            },
-                            "primary": true,
-                            "privateIPAddressVersion": "IPv4"
-                        }
-                    }
-                ],
-                
-            }
-        },
-        {
-            "type": "Microsoft.Compute/virtualMachines",
-            "apiVersion": "2019-07-01",
-            "name": "[parameters('virtualMachinesname1')]",
-            "location": "eastus",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname1'))]",
-                ],
-            "properties": {
-                "hardwareProfile": {
-                    "vmSize": "Standard_DS1_v2"
-                },
-                "storageProfile": {
-                    "imageReference": {
-                        "publisher": "MicrosoftWindowsServer",
-                        "offer": "WindowsServer",
-                        "sku": "2019-Datacenter",
-                        "version": "latest"
-                    },
-                   
-                },
-                "osProfile": {
-                    "computerName": "[parameters('virtualMachinesname1')]",
-                    "adminUsername": "[parameters('virtualMachinesname1')]",
-                     "adminPassword": "[parameters('adminPassword')]",
-                    "allowExtensionOperations": true
-                },
-                "networkProfile": {
-                    "networkInterfaces": [
-                        {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname1'))]"
-                        }
-                    ]
-                },
-                
-            }
-        },
-        {
-            "type": "Microsoft.Compute/virtualMachines",
-            "apiVersion": "2019-07-01",
-            "name": "[parameters('virtualMachinesname2')]",
-            "location": "eastus",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname2'))]"
-              
-            ],
-            "properties": {
-                "hardwareProfile": {
-                    "vmSize": "Standard_DS1_v2"
-                },
-                "storageProfile": {
-                    "imageReference": {
-                        "publisher": "MicrosoftWindowsServer",
-                        "offer": "WindowsServer",
-                        "sku": "2019-Datacenter",
-                        "version": "latest"
-                    },
-                  
-                },
-                "osProfile": {
-                    "computerName": "[parameters('virtualMachinesname2')]",
-                    "adminUsername": "[parameters('virtualMachinesname2')]",
-                     "adminPassword": "[parameters('adminPassword')]",
-                    "allowExtensionOperations": true
-                    
-                },
-                "networkProfile": {
-                    "networkInterfaces": [
-                        {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname2'))]"
-                        }
-                    ]
-                },
-                
-            }
-        },
-        
-        {
-            "type": "Microsoft.Compute/virtualMachines",
-            "apiVersion": "2019-07-01",
-            "name": "[parameters('virtualMachinesname3')]",
-            "location": "eastus",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname3'))]",
-               
-            ],
-            "properties": {
-                "hardwareProfile": {
-                    "vmSize": "Standard_DS1_v2"
-                },
-                "storageProfile": {
-                    "imageReference": {
-                        "publisher": "MicrosoftWindowsServer",
-                        "offer": "WindowsServer",
-                        "sku": "2019-Datacenter",
-                        "version": "latest"
-                    },
-                   
-                },
-                "osProfile": {
-                    "computerName": "[parameters('virtualMachinesname3')]",
-                    "adminUsername": "[parameters('virtualMachinesname3')]",
-                    "adminPassword": "[parameters('adminPassword')]",
-                    "allowExtensionOperations": true
-                    
-                },
-                "networkProfile": {
-                    "networkInterfaces": [
-                        {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname3'))]"
-                        }
-                    ]
-                },
-               
-            }
-        },
-        
-        {
-            "type": "Microsoft.Network/virtualNetworks/subnets",
-            "apiVersion": "2020-05-01",
-            "name": "[concat(parameters('virtualNetworksname'), '/ADSubnet')]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworksname'))]",
-                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname2'))]"
-            ],
-            "properties": {
-                "addressPrefix": "10.0.1.0/24",
-                "networkSecurityGroup": {
-                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname2'))]"
-                },
-                "delegations": [],
-                "privateEndpointNetworkPolicies": "Enabled",
-                "privateLinkServiceNetworkPolicies": "Enabled"
-            }
-        },
-        {
-            "type": "Microsoft.Network/virtualNetworks/subnets",
-            "apiVersion": "2020-05-01",
-            "name": "[concat(parameters('virtualNetworksname'), '/JSSubnet')]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworksname'))]",
-                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname1'))]"
-            ],
-            "properties": {
-                "addressPrefix": "10.0.0.0/24",
-                "networkSecurityGroup": {
-                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname1'))]"
-                },
-                "delegations": [],
-                "privateEndpointNetworkPolicies": "Enabled",
-                "privateLinkServiceNetworkPolicies": "Enabled"
-            }
-        },
-        {
-            "type": "Microsoft.Network/virtualNetworks/subnets",
-            "apiVersion": "2020-05-01",
-            "name": "[concat(parameters('virtualNetworksname'), '/ToolSubnet')]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworksname'))]",
-                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname3'))]"
-            ],
-            "properties": {
-                "addressPrefix": "10.0.2.0/24",
-                "networkSecurityGroup": {
-                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname3'))]"
-                },
-                "delegations": [],
-                "privateEndpointNetworkPolicies": "Enabled",
-                "privateLinkServiceNetworkPolicies": "Enabled"
-            }
-        },
-        {
-            "type": "Microsoft.Network/virtualNetworks",
-            "apiVersion": "2020-05-01",
-            "name": "[parameters('virtualNetworksname')]",
-            "location": "eastus",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname1'))]",
-                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname2'))]",
-                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname3'))]"
-            ],
-            "properties": {
-                "addressSpace": {
-                    "addressPrefixes": [
-                        "10.0.0.0/16"
-                    ]
-                },
-                "subnets": [
-                    {
-                        "name": "JSSubnet",
-                        "properties": {
-                            "addressPrefix": "10.0.0.0/24",
-                            "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname1'))]"
-                            },
-                            "delegations": [],
-                            "privateEndpointNetworkPolicies": "Enabled",
-                            "privateLinkServiceNetworkPolicies": "Enabled"
-                        }
-                    },
-                    {
-                        "name": "ADSubnet",
-                        "properties": {
-                            "addressPrefix": "10.0.1.0/24",
-                            "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname2'))]"
-                            },
-                            "delegations": [],
-                            "privateEndpointNetworkPolicies": "Enabled",
-                            "privateLinkServiceNetworkPolicies": "Enabled"
-                        }
-                    },
-                    {
-                        "name": "ToolSubnet",
-                        "properties": {
-                            "addressPrefix": "10.0.2.0/24",
-                            "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupsname3'))]"
-                            },
-                            "delegations": [],
-                            "privateEndpointNetworkPolicies": "Enabled",
-                            "privateLinkServiceNetworkPolicies": "Enabled"
-                        }
-                    }
-                ],
-                "virtualNetworkPeerings": [],
-                "enableDdosProtection": false,
-                "enableVmProtection": false
-            }
+          }
         }
-    ]
+      ]
+    },
+    {
+      "apiVersion": "2018-05-01-preview",
+      "name": "[concat('AppInsights', variables('webSiteName'))]",
+      "type": "Microsoft.Insights/components",
+      "location": "eastus",
+      "dependsOn": [
+        "[variables('webSiteName')]"
+      ],
+      "tags": {
+        "[concat('hidden-link:', resourceId('Microsoft.Web/sites', variables('webSiteName')))]": "Resource",
+        "displayName": "AppInsightsComponent"
+      },
+      "properties": {
+        "ApplicationId": "[variables('webSiteName')]"
+      }
+    }
+ 
+
+]
+
 }
