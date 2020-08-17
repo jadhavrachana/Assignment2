@@ -586,7 +586,6 @@
 				"enableDdosProtection": false,
 				"enableVmProtection": false
 			}
-<<<<<<< HEAD
 		},	
         {
       "name": "[variables('sqlserverName')]",
@@ -705,11 +704,6 @@
 ]
 
 }
-=======
-		}
-	]
-}
->>>>>>> cbfc6547ad90fd6b148f0c7834f9cff5cf368009{
 	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 	"contentVersion": "1.0.0.0",
 	"parameters": {
