@@ -256,7 +256,7 @@
                             "privateIPAddressVersion": "IPv4"
                         }
                     }
-                ],
+                ]
             }
         },
         
@@ -282,7 +282,7 @@
                             "privateIPAddressVersion": "IPv4"
                         }
                     }
-                ],
+                ]
             }
         },
         {
@@ -311,7 +311,7 @@
                             "privateIPAddressVersion": "IPv4"
                         }
                     }
-                ],
+                ]
                 
             }
         },
@@ -348,7 +348,7 @@
                             "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname1'))]"
                         }
                     ]
-                },
+                }
                 
             }
         },
@@ -387,7 +387,7 @@
                             "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname2'))]"
                         }
                     ]
-                },
+                }
                 
             }
         },
@@ -427,7 +427,7 @@
                             "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfacesname3'))]"
                         }
                     ]
-                },
+                }
                
             }
         },
