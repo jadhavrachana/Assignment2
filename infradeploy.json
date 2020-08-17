@@ -51,7 +51,6 @@
 		},
 		"adminPassword": {
 			"type": "SecureString"
-<<<<<<< HEAD
 		},
 		"skuName": {
 			"type": "string",
@@ -108,12 +107,6 @@
 
 	"resources": [
         {
-=======
-		}
-	},
-	"variables": {},
-	"resources": [{
->>>>>>> cbfc6547ad90fd6b148f0c7834f9cff5cf368009
 			"type": "Microsoft.Network/networkSecurityGroups",
 			"apiVersion": "2020-05-01",
 			"name": "[parameters('networkSecurityGroupsname1')]",
