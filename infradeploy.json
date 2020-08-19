@@ -536,9 +536,10 @@
 				"typeHandlerVersion": "1.9",
 				"settings": {
 					"fileUris": [
-						"https://raw.githubusercontent.com/anudnya/Azure_bootCamp/master/test.ps1"
+						
+                                               "https://raw.githubusercontent.com/jadhavrachana/Assignment2/master/adinstall.ps1"
 					],
-					"commandToExecute": "[concat('Powershell -ExecutionPolicy Unrestricted -File \"' , 'test.ps1')]"
+					"commandToExecute": "[concat('Powershell -ExecutionPolicy Unrestricted -File \"' , 'adinstall.ps1')]"
 				}
 
 			}
