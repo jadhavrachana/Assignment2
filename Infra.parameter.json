@@ -3,7 +3,7 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "location":{
-            "value": "eastus"
+            "value": "Westus2"
         },
         "virtualMachinesname2": {
             "value": "ADServer"
