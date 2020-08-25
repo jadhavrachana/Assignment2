@@ -9,6 +9,19 @@
 				"description": "Location for all resources."
 			}
 		},
+		"environments": {
+      "defaultValue": [
+        "Dev",
+        "QA",
+        "UAT",
+        "Preview"
+      ],
+      "type": "array",
+      "metadata": {
+        "description": "Array with the names for the environment slots"
+      },
+      "maxLength": 19
+    },
 		"virtualMachinesname1": {
 			"type": "String"
 		},
@@ -54,20 +67,7 @@
 			"type": "SecureString"
 		},
 
-		"skuName": {
-			"type": "string",
-			"defaultValue": "F1",
-			"metadata": {
-				"description": "Describes plan's pricing tier and instance size."
-			}
-		},
-		"skuCapacity": {
-			"type": "int",
-			"defaultValue": 1,
-			"metadata": {
-				"description": "Describes plan's instance count"
-			}
-		},
+	
 		"sqlAdministratorLogin": {
 			"type": "string",
 			"metadata": {
@@ -157,6 +157,7 @@
 		"applicationGatewayID": "[resourceId('Microsoft.Network/applicationGateways',variables('applicationGatewayName'))]",
 		"hostingPlanName": "[concat('hostingplan', uniqueString(resourceGroup().id))]",
 		"webSiteName": "[concat('webSite', uniqueString(resourceGroup().id))]",
+		 "standardPlanMaxAdditionalSlots": 4,
 		"sqlserverName": "[concat('sqlserver', uniqueString(resourceGroup().id))]",
 		"databaseName": "sampledb",
 		"subnetID1": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworksname'), variables('subnet1'))]",
@@ -537,7 +538,7 @@
 				"settings": {
 					"fileUris": [
 						
-                                               "https://raw.githubusercontent.com/jadhavrachana/Assignment2/master/adinstall.ps1"
+                        "https://raw.githubusercontent.com/jadhavrachana/Assignment2/master/adinstall.ps1"
 					],
 					"commandToExecute": "[concat('Powershell -ExecutionPolicy Unrestricted -File \"' , 'adinstall.ps1')]"
 				}
@@ -638,8 +639,8 @@
 				"displayName": "HostingPlan"
 			},
 			"sku": {
-				"name": "[parameters('skuName')]",
-				"capacity": "[parameters('skuCapacity')]"
+				"name": "[if(lessOrEquals(length(parameters('environments')), variables('standardPlanMaxAdditionalSlots')), 'S1', 'P1')]"
+
 			},
 			"properties": {
 				"name": "[variables('hostingPlanName')]"
@@ -672,6 +673,26 @@
 				}
 			}]
 		},
+		 {
+      "apiVersion": "2016-08-01",
+      "type": "Microsoft.Web/sites/slots",
+      "name": "[concat(variables('webSiteName'), '/', parameters('environments')[copyIndex()])]",
+      "location": "[parameters('location')]",
+      "comments": "This specifies the web app slots.",
+      "tags": {
+        "displayName": "WebAppSlots"
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/Sites', variables('webSiteName'))]"
+      ],
+      "copy": {
+        "name": "webPortalSlot",
+        "count": "[length(parameters('environments'))]"
+      }
+    },
 		{
 			"apiVersion": "2018-05-01-preview",
 			"name": "[concat('AppInsights', variables('webSiteName'))]",
